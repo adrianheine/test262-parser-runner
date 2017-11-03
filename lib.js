@@ -1,10 +1,9 @@
 "use strict";
 
-const chalk = require("chalk");
 const utils = require("./utils");
 
-module.exports = (testDir, parse, shouldSkip, whitelist) => {
-  utils.getTests(testDir, shouldSkip).then(function(tests) {
+module.exports = (testDir, parse, shouldSkip) => {
+  return utils.getTests(testDir, shouldSkip).then(function(tests) {
     const total = tests.length;
     const reportInc = Math.floor(total / 20);
 
@@ -18,86 +17,6 @@ module.exports = (testDir, parse, shouldSkip, whitelist) => {
       return utils.runTest(test, parse);
     });
 
-    return utils.interpret(results, whitelist);
+    return results
   })
-  .then(function(summary) {
-    const goodnews = [
-      summary.allowed.success.length + " valid programs parsed without error",
-      summary.allowed.failure.length +
-        " invalid programs produced a parsing error",
-      summary.allowed.falsePositive.length +
-        " invalid programs did not produce a parsing error" +
-        " (and allowed by the whitelist file)",
-      summary.allowed.falseNegative.length +
-        " valid programs produced a parsing error" +
-        " (and allowed by the whitelist file)",
-      summary.skipped.length +
-        " programs were skipped"
-    ];
-    const badnews = [];
-    const badnewsDetails = [];
-
-    void [
-      {
-        tests: summary.disallowed.success,
-        label:
-          "valid programs parsed without error" +
-          " (in violation of the whitelist file)",
-      },
-      {
-        tests: summary.disallowed.failure,
-        label:
-          "invalid programs produced a parsing error" +
-          " (in violation of the whitelist file)",
-      },
-      {
-        tests: summary.disallowed.falsePositive,
-        label:
-          "invalid programs did not produce a parsing error" +
-          " (without a corresponding entry in the whitelist file)",
-      },
-      {
-        tests: summary.disallowed.falseNegative,
-        label:
-          "valid programs produced a parsing error" +
-          " (without a corresponding entry in the whitelist file)",
-      },
-      {
-        tests: summary.unrecognized,
-        label: "non-existent programs specified in the whitelist file",
-      },
-    ].forEach(function({ tests, label }) {
-      if (!tests.length) {
-        return;
-      }
-
-      const desc = tests.length + " " + label;
-
-      badnews.push(desc);
-      badnewsDetails.push(desc + ":");
-      badnewsDetails.push(
-        ...tests.map(function(test) {
-          return test.id || test;
-        })
-      );
-    });
-
-    console.log("Testing complete.");
-    console.log("Summary:");
-    console.log(chalk.green(goodnews.join("\n").replace(/^/gm, " ✔ ")));
-
-    if (!summary.passed) {
-      console.log("");
-      console.log(chalk.red(badnews.join("\n").replace(/^/gm, " ✘ ")));
-      console.log("");
-      console.log("Details:");
-      console.log(badnewsDetails.join("\n").replace(/^/gm, "   "));
-    }
-
-    process.exitCode = summary.passed ? 0 : 1;
-  })
-  .catch(function(err) {
-    console.error(err);
-    process.exitCode = 1;
-  });
 }
