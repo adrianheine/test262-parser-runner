@@ -10,8 +10,6 @@ const pfs = {
   stat: promisify(fs.stat)
 };
 
-const parse = require("..").parse;
-
 const modulePattern = /^\s*-\s*module\s*$|^\s*flags\s*:.*\bmodule\b/m;
 const noStrictPattern = /^\s*-\s*noStrict\s*$|^\s*flags\s*:.*\bnoStrict\b/m;
 const onlyStrictPattern = /^\s*-\s*onlyStrict\s*$|^\s*flags\s*:.*\bonlyStrict\b/m;
@@ -42,7 +40,7 @@ function readDirDeep(dirName) {
       contents.map(function(name) {
         return findTests(path.join(dirName, name));
       })
-    ).then(flatten)
+    ).then(flatten);
   });
 }
 
@@ -56,22 +54,23 @@ function findTests(name) {
   });
 }
 
-function readTest(fileName, testDir) {
+function readTest(fileName, testDir, shouldSkip) {
   if (!testNamePattern.test(fileName)) {
     return Promise.resolve([]);
   }
 
   return pfs.readFile(fileName, "utf-8").then(function(contents) {
-    return makeScenarios(path.relative(testDir, fileName), contents);
+    return makeScenarios(path.relative(testDir, fileName), contents, shouldSkip(contents));
   });
 }
 
-function makeScenarios(fileName, testContent) {
+function makeScenarios(fileName, testContent, skip) {
   const scenarios = [];
   const base = {
     fileName: fileName,
     isModule: modulePattern.test(testContent),
     expectedError: hasEarlyError(testContent),
+    skip
   };
   const isNoStrict = noStrictPattern.test(testContent);
   const isOnlyStrict = onlyStrictPattern.test(testContent);
@@ -104,84 +103,37 @@ function makeScenarios(fileName, testContent) {
   return scenarios;
 }
 
-exports.getTests = function(testDir) {
+exports.getTests = function(testDir, shouldSkip) {
   return findTests(testDir)
     .then(function(testPaths) {
       return Promise.all(
         testPaths.map(function(path) {
-          return readTest(path, testDir);
+          return readTest(path, testDir, shouldSkip);
         })
       );
     })
     .then(flatten);
 };
 
-exports.runTest = function(test, plugins) {
+exports.runTest = function(test, parse) {
+  if (test.skip) return test
   const sourceType = test.isModule ? "module" : "script";
 
   try {
-    parse(test.content, { sourceType: sourceType, plugins: plugins });
+    parse(test.content, { sourceType });
     test.actualError = false;
   } catch (err) {
     test.actualError = true;
   }
 
-  test.result = test.expectedError !== test.actualError ? "fail" : "pass";
-
   return test;
 };
 
-exports.getWhitelist = function(filename) {
-  return pfs.readFile(filename, "utf-8").then(function(contents) {
-    return contents
-      .split("\n")
-      .map(function(line) {
-        return line.replace(/#.*$/, "").trim();
-      })
-      .filter(function(line) {
-        return line.length > 0;
-      })
-      .reduce(function(table, filename) {
-        table[filename] = true;
-        return table;
-      }, Object.create(null));
-  });
-};
-
-exports.updateWhitelist = function(filename, summary) {
-  return pfs.readFile(filename, "utf-8").then(function(contents) {
-    const toRemove = summary.disallowed.success
-      .concat(summary.disallowed.failure)
-      .map(function(test) {
-        return test.id;
-      });
-    const toAdd = summary.disallowed.falsePositive
-      .concat(summary.disallowed.falseNegative)
-      .map(function(test) {
-        return test.id;
-      });
-    const newContents = contents
-      .split("\n")
-      .map(function(line) {
-        const testId = line.replace(/#.*$/, "").trim();
-
-        if (toRemove.indexOf(testId) > -1) {
-          return null;
-        }
-
-        return line;
-      })
-      .filter(function(line) {
-        return line !== null;
-      })
-      .concat(toAdd)
-      .join("\n");
-
-    return pfs.writeFile(filename, newContents, "utf-8");
-  });
-};
-
 exports.interpret = function(results, whitelist) {
+  whitelist = whitelist.reduce((res, v) => {
+    res[v] = true
+    return res
+  }, {})
   const summary = {
     passed: true,
     allowed: {
@@ -197,6 +149,7 @@ exports.interpret = function(results, whitelist) {
       falseNegative: [],
     },
     unrecognized: null,
+    skipped: []
   };
 
   results.forEach(function(result) {
@@ -204,7 +157,10 @@ exports.interpret = function(results, whitelist) {
     const inWhitelist = result.id in whitelist;
     delete whitelist[result.id];
 
-    if (!result.expectedError) {
+    if (result.skip) {
+      summary.skipped.push(result)
+      return
+    } else if (!result.expectedError) {
       if (!result.actualError) {
         classification = "success";
         isAllowed = !inWhitelist;

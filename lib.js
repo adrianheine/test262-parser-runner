@@ -1,16 +1,10 @@
 "use strict";
 
-const path = require("path");
 const chalk = require("chalk");
-const utils = require("./run_test262_utils");
+const utils = require("./utils");
 
-const testDir = path.join(__dirname, "..", "build", "test262", "test");
-const whitelistFile = path.join(__dirname, "test262_whitelist.txt");
-const plugins = ["asyncGenerators", "objectRestSpread", "optionalCatchBinding"];
-const shouldUpdate = process.argv.indexOf("--update-whitelist") > -1;
-
-Promise.all([utils.getTests(testDir), utils.getWhitelist(whitelistFile)])
-  .then(function([tests, whitelist]) {
+module.exports = (testDir, parse, shouldSkip, whitelist) => {
+  utils.getTests(testDir, shouldSkip).then(function(tests) {
     const total = tests.length;
     const reportInc = Math.floor(total / 20);
 
@@ -21,7 +15,7 @@ Promise.all([utils.getTests(testDir), utils.getWhitelist(whitelistFile)])
         console.log(`> ${Math.round(100 * idx / total)}% complete`);
       }
 
-      return utils.runTest(test, plugins);
+      return utils.runTest(test, parse);
     });
 
     return utils.interpret(results, whitelist);
@@ -37,6 +31,8 @@ Promise.all([utils.getTests(testDir), utils.getWhitelist(whitelistFile)])
       summary.allowed.falseNegative.length +
         " valid programs produced a parsing error" +
         " (and allowed by the whitelist file)",
+      summary.skipped.length +
+        " programs were skipped"
     ];
     const badnews = [];
     const badnewsDetails = [];
@@ -98,16 +94,10 @@ Promise.all([utils.getTests(testDir), utils.getWhitelist(whitelistFile)])
       console.log(badnewsDetails.join("\n").replace(/^/gm, "   "));
     }
 
-    if (shouldUpdate) {
-      return utils.updateWhitelist(whitelistFile, summary).then(function() {
-        console.log("");
-        console.log("Whitelist file updated.");
-      });
-    } else {
-      process.exitCode = summary.passed ? 0 : 1;
-    }
+    process.exitCode = summary.passed ? 0 : 1;
   })
   .catch(function(err) {
     console.error(err);
     process.exitCode = 1;
   });
+}
