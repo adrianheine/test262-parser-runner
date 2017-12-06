@@ -31,7 +31,7 @@ run(
   (content, {sourceType}) => {
     return parse(content, { sourceType, ecmaVersion: 9 });
   },
-  testContent => false, // Skip no test
+  test => false, // Skip no test
   [] // Put no test on the white list
 )
 ```
