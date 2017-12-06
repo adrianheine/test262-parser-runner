@@ -59,7 +59,7 @@ module.exports = (results, whitelist) => {
     badnewsDetails.push(desc + ":");
     badnewsDetails.push(
       ...tests.map(function(test) {
-        return test.id || test;
+        return test.file || test
       })
     );
   });

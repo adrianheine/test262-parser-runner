@@ -1,22 +1,31 @@
 "use strict";
 
+const TestStream = require('test262-stream');
 const utils = require("./utils");
 
+const endOfAssertJs = "assert.throws(err, function() { Function(wrappedCode); }, 'Function: ' + code);\n};"
+const useStrict = '"use strict";\n';
+
 module.exports = (testDir, parse, shouldSkip) => {
-  return utils.getTests(testDir, shouldSkip).then(function(tests) {
-    const total = tests.length;
-    const reportInc = Math.floor(total / 20);
+  const stream = new TestStream(testDir);
 
-    console.log(`Now running ${total} tests...`);
-
-    const results = tests.map(function(test, idx) {
-      if (idx % reportInc === 0) {
-        console.log(`> ${Math.round(100 * idx / total)}% complete`);
+  const results = [];
+  stream.on('data', test => {
+    if (shouldSkip(test)) {
+      results.push({skip: true});
+    } else {
+      test.file = test.file.substr(5); // Strip leading 'test/'
+      if (!test.attrs.flags.raw) {
+        // Strip helpers, but keep strict directive if present
+        const m = test.contents.indexOf(endOfAssertJs) + endOfAssertJs.length
+        test.contents = (test.contents.substr(0, useStrict.length) === useStrict ? useStrict : '') + test.contents.substr(m)
       }
+      results.push(utils.runTest(test, parse));
+    }
+  });
 
-      return utils.runTest(test, parse);
-    });
-
-    return results
-  })
+  return new Promise((resolve, reject) => {
+    stream.on('end', () => resolve(results));
+    stream.on('error', reject);
+  });
 }
