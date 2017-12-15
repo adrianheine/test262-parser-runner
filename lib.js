@@ -1,10 +1,23 @@
 "use strict";
 
 const TestStream = require('test262-stream');
-const utils = require("./utils");
 
 const endOfAssertJs = "assert.throws(err, function() { Function(wrappedCode); }, 'Function: ' + code);\n};"
 const useStrict = '"use strict";\n';
+
+const runTest = function(test, parse) {
+  const sourceType = test.attrs.flags.module ? "module" : "script";
+
+  test.expectedError = test.attrs.negative && test.attrs.negative.phase === "early"
+  try {
+    parse(test.contents, { sourceType });
+    test.actualError = false;
+  } catch (err) {
+    test.actualError = true;
+  }
+
+  return test;
+};
 
 module.exports = (testDir, parse, shouldSkip) => {
   const stream = new TestStream(testDir);
@@ -20,7 +33,7 @@ module.exports = (testDir, parse, shouldSkip) => {
         const m = test.contents.indexOf(endOfAssertJs) + endOfAssertJs.length
         test.contents = (test.contents.substr(0, useStrict.length) === useStrict ? useStrict : '') + test.contents.substr(m)
       }
-      results.push(utils.runTest(test, parse));
+      results.push(runTest(test, parse));
     }
   });
 

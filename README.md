@@ -21,18 +21,19 @@ Second, there is a whitelist, which is a list of test ids that don't yield the
 expected result. It should be used for tests that are supposed to succeed
 eventually.
 
-This is a minimal example for running the tests against acorn:
+This is a simple example for running the tests against acorn:
 
 ```javascript
 const run = require("test262-parser-runner")
 const parse = require("acorn").parse
 
 run(
-  (content, {sourceType}) => {
-    return parse(content, { sourceType, ecmaVersion: 9 });
-  },
-  test => false, // Skip no test
-  [] // Put no test on the white list
+  (content, {sourceType}) => parse(content, { sourceType, ecmaVersion: 9 }),
+  {
+    skip: test => false, // Default is to skip no test
+    whitelist: [], // Default is to whitelist no test
+    testsDirectory: "/path/to/test262" // Default is to use the bundled version
+  }
 )
 ```
 

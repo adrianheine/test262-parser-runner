@@ -1,8 +1,69 @@
-const utils = require("./utils");
+"use strict";
+
 const chalk = require("chalk");
 
+const interpret = function(results, whitelist) {
+  whitelist = whitelist.reduce((res, v) => {
+    res[v] = true
+    return res
+  }, {})
+  const summary = {
+    passed: true,
+    allowed: {
+      success: [],
+      failure: [],
+      falsePositive: [],
+      falseNegative: [],
+    },
+    disallowed: {
+      success: [],
+      failure: [],
+      falsePositive: [],
+      falseNegative: [],
+    },
+    unrecognized: null,
+    skipped: []
+  };
+
+  results.forEach(function(result) {
+    let classification, isAllowed;
+    const desc = result.file + ' (' + result.scenario + ')';
+    const inWhitelist = desc in whitelist;
+    delete whitelist[desc];
+
+    if (result.skip) {
+      summary.skipped.push(result)
+      return
+    } else if (!result.expectedError) {
+      if (!result.actualError) {
+        classification = "success";
+        isAllowed = !inWhitelist;
+      } else {
+        classification = "falseNegative";
+        isAllowed = inWhitelist;
+      }
+    } else {
+      if (!result.actualError) {
+        classification = "falsePositive";
+        isAllowed = inWhitelist;
+      } else {
+        classification = "failure";
+        isAllowed = !inWhitelist;
+      }
+    }
+
+    summary.passed &= isAllowed;
+    summary[isAllowed ? "allowed" : "disallowed"][classification].push(result);
+  });
+
+  summary.unrecognized = Object.keys(whitelist);
+  summary.passed = !!summary.passed && summary.unrecognized.length === 0;
+
+  return summary;
+};
+
 module.exports = (results, whitelist) => {
-  const summary = utils.interpret(results, whitelist);
+  const summary = interpret(results, whitelist);
   const goodnews = [
     summary.allowed.success.length + " valid programs parsed without error",
     summary.allowed.failure.length +
