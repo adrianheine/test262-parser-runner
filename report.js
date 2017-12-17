@@ -120,7 +120,7 @@ module.exports = (results, whitelist) => {
     badnewsDetails.push(desc + ":");
     badnewsDetails.push(
       ...tests.map(function(test) {
-        return (test.file + ' (' + test.scenario + ')') || test
+        return test.file ? (test.file + ' (' + test.scenario + ')') : test
       })
     );
   });
