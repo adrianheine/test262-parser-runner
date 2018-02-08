@@ -20,7 +20,7 @@ const runTest = function(test, parse) {
 };
 
 module.exports = (testDir, parse, shouldSkip) => {
-  const stream = new TestStream(testDir);
+  const stream = new TestStream(testDir, {acceptVersion: "2.0.0"});
 
   const results = [];
   stream.on('data', test => {
