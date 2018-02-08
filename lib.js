@@ -8,7 +8,7 @@ const useStrict = '"use strict";\n';
 const runTest = function(test, parse) {
   const sourceType = test.attrs.flags.module ? "module" : "script";
 
-  test.expectedError = test.attrs.negative && test.attrs.negative.phase === "early"
+  test.expectedError = test.attrs.negative && (test.attrs.negative.phase === "parse" || test.attrs.negative.phase === "early")
   try {
     parse(test.contents, { sourceType });
     test.actualError = false;
