@@ -23,8 +23,8 @@
   },
   "homepage": "https://github.com/adrianheine/test262-parser-runner#readme",
   "dependencies": {
-    "chalk": "^2.3.0",
+    "chalk": "^2.3.1",
     "test262": "git+https://github.com/tc39/test262.git",
-    "test262-stream": "^1.0.0"
+    "test262-stream": "^1.1.0"
   }
 }

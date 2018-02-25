@@ -2,9 +2,6 @@
 
 const TestStream = require('test262-stream');
 
-const endOfAssertJs = "assert.throws(err, function() { Function(wrappedCode); }, 'Function: ' + code);\n};"
-const useStrict = '"use strict";\n';
-
 const runTest = function(test, parse) {
   const sourceType = test.attrs.flags.module ? "module" : "script";
 
@@ -20,7 +17,7 @@ const runTest = function(test, parse) {
 };
 
 module.exports = (testDir, parse, shouldSkip) => {
-  const stream = new TestStream(testDir, {acceptVersion: "2.0.0"});
+  const stream = new TestStream(testDir, { omitRuntime: true });
 
   const results = [];
   stream.on('data', test => {
@@ -28,11 +25,6 @@ module.exports = (testDir, parse, shouldSkip) => {
       results.push({skip: true});
     } else {
       test.file = test.file.substr(5); // Strip leading 'test/'
-      if (!test.attrs.flags.raw) {
-        // Strip helpers, but keep strict directive if present
-        const m = test.contents.indexOf(endOfAssertJs) + endOfAssertJs.length
-        test.contents = (test.contents.substr(0, useStrict.length) === useStrict ? useStrict : '') + test.contents.substr(m)
-      }
       results.push(runTest(test, parse));
     }
   });
