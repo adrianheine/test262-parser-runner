@@ -1,3 +1,7 @@
+## 0.5.0 (2018-10-21)
+
+* Update test262-stream dependency
+
 ## 0.4.0 (2018-02-25)
 
 * Update test262-stream dependency
