@@ -2,8 +2,8 @@
 
 const chalk = require("chalk");
 
-const interpret = function(results, whitelist) {
-  whitelist = whitelist.reduce((res, v) => {
+const interpret = function(results, allowlist) {
+  allowlist = allowlist.reduce((res, v) => {
     res[v] = true
     return res
   }, {})
@@ -28,8 +28,8 @@ const interpret = function(results, whitelist) {
   results.forEach(function(result) {
     let classification, isAllowed;
     const desc = result.file + ' (' + result.scenario + ')';
-    const inWhitelist = desc in whitelist;
-    delete whitelist[desc];
+    const inAllowlist = desc in allowlist;
+    delete allowlist[desc];
 
     if (result.skip) {
       summary.skipped.push(result)
@@ -37,18 +37,18 @@ const interpret = function(results, whitelist) {
     } else if (!result.expectedError) {
       if (!result.actualError) {
         classification = "success";
-        isAllowed = !inWhitelist;
+        isAllowed = !inAllowlist;
       } else {
         classification = "falseNegative";
-        isAllowed = inWhitelist;
+        isAllowed = inAllowlist;
       }
     } else {
       if (!result.actualError) {
         classification = "falsePositive";
-        isAllowed = inWhitelist;
+        isAllowed = inAllowlist;
       } else {
         classification = "failure";
-        isAllowed = !inWhitelist;
+        isAllowed = !inAllowlist;
       }
     }
 
@@ -56,24 +56,24 @@ const interpret = function(results, whitelist) {
     summary[isAllowed ? "allowed" : "disallowed"][classification].push(result);
   });
 
-  summary.unrecognized = Object.keys(whitelist);
+  summary.unrecognized = Object.keys(allowlist);
   summary.passed = !!summary.passed && summary.unrecognized.length === 0;
 
   return summary;
 };
 
-module.exports = (results, whitelist) => {
-  const summary = interpret(results, whitelist);
+module.exports = (results, allowlist) => {
+  const summary = interpret(results, allowlist);
   const goodnews = [
     summary.allowed.success.length + " valid programs parsed without error",
     summary.allowed.failure.length +
       " invalid programs produced a parsing error",
     summary.allowed.falsePositive.length +
       " invalid programs did not produce a parsing error" +
-      " (and allowed by the whitelist file)",
+      " (and allowed by the allowlist file)",
     summary.allowed.falseNegative.length +
       " valid programs produced a parsing error" +
-      " (and allowed by the whitelist file)",
+      " (and allowed by the allowlist file)",
     summary.skipped.length +
       " programs were skipped"
   ];
@@ -85,29 +85,29 @@ module.exports = (results, whitelist) => {
       tests: summary.disallowed.success,
       label:
         "valid programs parsed without error" +
-        " (in violation of the whitelist file)",
+        " (in violation of the allowlist file)",
     },
     {
       tests: summary.disallowed.failure,
       label:
         "invalid programs produced a parsing error" +
-        " (in violation of the whitelist file)",
+        " (in violation of the allowlist file)",
     },
     {
       tests: summary.disallowed.falsePositive,
       label:
         "invalid programs did not produce a parsing error" +
-        " (without a corresponding entry in the whitelist file)",
+        " (without a corresponding entry in the allowlist file)",
     },
     {
       tests: summary.disallowed.falseNegative,
       label:
         "valid programs produced a parsing error" +
-        " (without a corresponding entry in the whitelist file)",
+        " (without a corresponding entry in the allowlist file)",
     },
     {
       tests: summary.unrecognized,
-      label: "non-existent programs specified in the whitelist file",
+      label: "non-existent programs specified in the allowlist file",
     },
   ].forEach(function({ tests, label }) {
     if (!tests.length) {

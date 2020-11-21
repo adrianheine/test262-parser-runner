@@ -17,7 +17,7 @@ passed in and returns true if a test should be completely skipped. It is most
 useful for filtering out tests that are not supposed to pass, for example
 because they test features that are not supposed to be implemented.
 
-Second, there is a whitelist, which is a list of test ids that don't yield the
+Second, there is a allowlist, which is a list of test ids that don't yield the
 expected result. It should be used for tests that are supposed to succeed
 eventually.
 
@@ -31,7 +31,7 @@ run(
   (content, {sourceType}) => parse(content, { sourceType, ecmaVersion: 9 }),
   {
     skip: test => false, // Default is to skip no test
-    whitelist: [], // Default is to whitelist no test
+    allowlist: [], // Default is to allowlist no test
     testsDirectory: "/path/to/test262" // Default is to use the bundled version
   }
 )
